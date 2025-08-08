@@ -11,11 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('categories', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('slug');
-            $table->timestamps();
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('email');
+            $table->dropColumn('email_verified_at');
         });
     }
 
@@ -24,6 +22,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('categories');
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('email');
+            $table->timestamp('email')->nullable()->default(null);
+        });
     }
 };

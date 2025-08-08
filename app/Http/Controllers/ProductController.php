@@ -58,5 +58,8 @@ class ProductController extends Controller
     {
         $slug = Str::slug($request->get('name'));
         return Product::where('slug', $slug)->get();  
+        // return response()->json([
+        //     'message'=> "dasas",
+        // ]);
     }
 }
