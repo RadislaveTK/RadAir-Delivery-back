@@ -22,7 +22,7 @@ return [
     // 'allowed_origins' => ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://192.168.1.107:3000'],
     // 'https://rad-air-delivery.vercel.app',
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['https://radair.up.railway.app'],
 
     'allowed_origins_patterns' => [],
 
