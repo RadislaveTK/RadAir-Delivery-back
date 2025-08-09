@@ -18,6 +18,7 @@ Route::get("/product/search", [ProductController::class, 'search']);
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+Route::get('/logout',  [UserController::class, 'logout'])->middleware('auth:sanctum');
 
 
 Route::post('/register', [UserController::class, 'register'])->name('register');
