@@ -117,6 +117,10 @@ class UserController extends Controller
         Auth::guard('web')->logout();
         Auth::logout();
         Auth::user()->tokens()->delete();
-        return response()->json(['message' => 'Вы вышли']);
+        return response()->json([
+            'response_code' => 200,
+            'status' => 'success',
+            'message' => 'Вы вышли',
+        ], 200);
     }
 }
