@@ -19,8 +19,10 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://192.168.1.107:3000'],
-    'https://rad-air-delivery.vercel.app',
+    // 'allowed_origins' => ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://192.168.1.107:3000'],
+    // 'https://rad-air-delivery.vercel.app',
+
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 
