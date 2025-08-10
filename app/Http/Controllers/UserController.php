@@ -115,8 +115,8 @@ class UserController extends Controller
     public function logout(Request $request)
     {
         // Auth::guard('web')->logout();
-        Auth::logout();
-        $request->session()->regenerate();
+        // Auth::logout();
+        // $request->session()->regenerate();
         // Auth::user()->tokens()->delete();
         $request->user()->currentAccessToken()->delete();
         return response()->json([
