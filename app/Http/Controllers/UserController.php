@@ -118,7 +118,16 @@ class UserController extends Controller
         // Auth::logout();
         // $request->session()->regenerate();
         // Auth::user()->tokens()->delete();
-        $request->user()->currentAccessToken()->delete();
+        // $request->user()->currentAccessToken()->delete();
+
+        Auth::guard('web')->logout();
+
+        // Инвалидируем текущую сессию
+        $request->session()->invalidate();
+
+        // Генерируем новый CSRF токен
+        $request->session()->regenerateToken();
+
         return response()->json([
             'response_code' => 200,
             'status' => 'success',
