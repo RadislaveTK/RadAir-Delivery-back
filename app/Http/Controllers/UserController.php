@@ -101,14 +101,14 @@ class UserController extends Controller
                 'message' => 'Неверные данные'
             ], 401);
         }
-        $token = Auth::user()->createToken('authToken')->plainTextToken;
+        // $token = Auth::user()->createToken('authToken')->plainTextToken;
 
         return response()->json([
             'response_code' => 200,
             'status' => 'success',
             'message' => 'Авторизация пройдена',
             'user' => Auth::user(),
-            'token' => $token,
+            // 'token' => $token,
         ], 200);
     }
 
