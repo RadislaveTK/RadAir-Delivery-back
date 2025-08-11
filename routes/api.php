@@ -9,7 +9,7 @@ use App\Http\Controllers\ProductController;
 Route::get("/category/create/{name}", [CategoryController::class, 'create']);
 Route::get("/category", [CategoryController::class, 'show']);
 
-Route::get("/product/create_product", [ProductController::class, 'create']);
+Route::post("/product/create_product", [ProductController::class, 'create']);
 Route::get("/product", [ProductController::class, 'show']);
 
 Route::get("/product/search", [ProductController::class, 'search']);
