@@ -63,9 +63,7 @@ class ProductController extends Controller
         $name = trim($request->get('name'));
 
         if (!$name) {
-            return response()->json([
-                "products" => Product::all(),
-            ]);
+            return Product::all();
         }
 
         $slug = Str::slug($name);
@@ -77,19 +75,21 @@ class ProductController extends Controller
             'products' => ['продукты', 'еда', 'магазин']
         ];
 
-        $category = null;
+        $categorySlug = null;
         foreach ($synonyms as $cat => $words) {
             foreach ($words as $word) {
                 if (mb_stripos($name, $word) !== false) {
-                    $category = $cat;
+                    $categorySlug = $cat;
                     break 2;
                 }
             }
         }
 
         return Product::query()
-            ->when($category, function ($q) use ($category) {
-                $q->where('category', $category);
+            ->when($categorySlug, function ($q) use ($categorySlug) {
+                $q->whereHas('category', function ($query) use ($categorySlug) {
+                    $query->where('slug', $categorySlug);
+                });
             })
             ->orWhere('name', 'like', "%$name%")
             ->orWhere('slug', 'like', "%$slug%")
