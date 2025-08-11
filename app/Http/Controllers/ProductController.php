@@ -56,10 +56,37 @@ class ProductController extends Controller
 
     public function search(Request $request)
     {
-        $slug = Str::slug($request->get('name'));
-        return Product::where('slug', $slug)->get();  
-        // return response()->json([
-        //     'message'=> "dasas",
-        // ]);
+        $name = trim($request->get('name'));
+
+        if (!$name) {
+            return response()->json([]);
+        }
+
+        $slug = Str::slug($name);
+
+        // Синонимы категорий
+        $synonyms = [
+            'fastfood' => ['fast food','fastfood', 'фаст фуд', 'бургеры', 'бургер', 'шаурма', 'шаверма', 'гамбургер', 'пицца'],
+            'restouran' => ['ресторан', 'кафе', 'столовая', 'пиццерия'],
+            'products' => ['продукты', 'еда', 'магазин']
+        ];
+
+        $category = null;
+        foreach ($synonyms as $cat => $words) {
+            foreach ($words as $word) {
+                if (mb_stripos($name, $word) !== false) {
+                    $category = $cat;
+                    break 2;
+                }
+            }
+        }
+
+        return Product::query()
+            ->when($category, function ($q) use ($category) {
+                $q->where('category', $category);
+            })
+            ->orWhere('name', 'like', "%$name%")
+            ->orWhere('slug', 'like', "%$slug%")
+            ->get();
     }
 }
