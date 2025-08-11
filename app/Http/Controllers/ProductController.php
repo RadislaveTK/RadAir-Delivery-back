@@ -15,24 +15,28 @@ class ProductController extends Controller
         return Product::all();
     }
 
-    public function create(Request $request, Category $slug)
+    public function create(Request $request)
     {
         // dd($request);
         //  Валидация данных
         $validator = $request->validate([
             'name' => 'required|string',
+            'category' => 'required|string',
             'desc' => 'string|nullable',
             'count' => 'required|integer',
             'price' => 'required|decimal:0,4',
             'producer' => 'required|string',
             'volume' => 'required|decimal:0,4',
             'country' => 'required|string',
-            'img' => 'required|string',
+            'img' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
-        // dd($validator['producer']);
+
+        $slug = Category::where('name', $validator['category'])->first();
+        $path = $request->file('img')->store('products', 'public');
 
         // //  Генерация slug
         $slug_product = Str::slug($validator['name']);
+
         $product = $slug->products()->create([
             'name' => $validator['name'],
             'desc' => $validator['desc'],
@@ -41,9 +45,9 @@ class ProductController extends Controller
             'producer' => $validator['producer'],
             'volume' => $validator['volume'],
             'country' => $validator['country'],
-            'img' => $validator['img'],
+            'img' => $path, // путь к картинке
             'category_id' => $slug->id,
-            'slug' => $slug_product
+            'slug' => Str::slug($validator['name'])
         ]);
         // dd($product);
 
@@ -59,14 +63,16 @@ class ProductController extends Controller
         $name = trim($request->get('name'));
 
         if (!$name) {
-            return response()->json([]);
+            return response()->json([
+                "products" => Product::all(),
+            ]);
         }
 
         $slug = Str::slug($name);
 
         // Синонимы категорий
         $synonyms = [
-            'fastfood' => ['fast food','fastfood', 'фаст фуд', 'бургеры', 'бургер', 'шаурма', 'шаверма', 'гамбургер', 'пицца'],
+            'fastfood' => ['fast food', 'fastfood', 'фаст фуд', 'бургеры', 'бургер', 'шаурма', 'шаверма', 'гамбургер', 'пицца'],
             'restouran' => ['ресторан', 'кафе', 'столовая', 'пиццерия'],
             'products' => ['продукты', 'еда', 'магазин']
         ];
