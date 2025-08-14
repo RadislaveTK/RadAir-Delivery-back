@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -17,8 +17,7 @@ class ProductController extends Controller
 
     public function create(Request $request)
     {
-        // dd($request);
-        //  Валидация данных
+        // Валидация
         $validator = $request->validate([
             'name' => 'required|string',
             'category' => 'required|string',
@@ -31,12 +30,42 @@ class ProductController extends Controller
             'img' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
+        // Находим категорию
         $slug = Category::where('name', $validator['category'])->first();
-        $path = $request->file('img')->store('products', 'public');
 
-        // //  Генерация slug
-        $slug_product = Str::slug($validator['name']);
+        if (!$slug) {
+            return response()->json(['error' => 'Категория не найдена'], 404);
+        }
 
+        // API-ключ ImgBB (вынеси в .env)
+        $apiKey = env('IMGBB_API_KEY');
+
+        // Читаем содержимое файла и кодируем в base64
+        $imagePath = $request->file('img')->getRealPath();
+        $imageData = base64_encode(file_get_contents($imagePath));
+
+        // Отправляем запрос в ImgBB
+        $client = new \GuzzleHttp\Client();
+        $response = $client->post('https://api.imgbb.com/1/upload', [
+            'query' => [
+                'key' => $apiKey,
+            ],
+            'form_params' => [
+                'image' => $imageData,
+                // 'expiration' => 600, // опционально, автоудаление через X секунд
+            ],
+        ]);
+
+        $result = json_decode($response->getBody(), true);
+
+        if (!isset($result['success']) || !$result['success']) {
+            return response()->json(['error' => 'Ошибка загрузки фото в ImgBB'], 500);
+        }
+
+        // URL картинки с ImgBB
+        $imgUrl = $result['data']['url'];
+
+        // Создаём продукт
         $product = $slug->products()->create([
             'name' => $validator['name'],
             'desc' => $validator['desc'],
@@ -45,13 +74,11 @@ class ProductController extends Controller
             'producer' => $validator['producer'],
             'volume' => $validator['volume'],
             'country' => $validator['country'],
-            'img' => $path, // путь к картинке
+            'img' => $imgUrl,  // сохраняем не путь к файлу, а URL ImgBB
             'category_id' => $slug->id,
             'slug' => Str::slug($validator['name'])
         ]);
-        // dd($product);
 
-        // //  Ответ (или редирект)
         return response()->json([
             'message' => 'Товар успешно создан',
             'category' => $product,
@@ -94,7 +121,8 @@ class ProductController extends Controller
         // Фильтр по категории
         if ($categorySlug) {
             $query->whereHas('category', function ($q) use ($categorySlug) {
-                $q->where('slug', $categorySlug)
+                $q
+                    ->where('slug', $categorySlug)
                     ->orWhere('name', 'like', "%$categorySlug%");
             });
         }
@@ -102,7 +130,8 @@ class ProductController extends Controller
         // Фильтр по имени
         if ($name) {
             $query->where(function ($q) use ($name, $slug) {
-                $q->where('name', 'like', "%$name%")
+                $q
+                    ->where('name', 'like', "%$name%")
                     ->orWhere('slug', 'like', "%$slug%");
             });
         }
