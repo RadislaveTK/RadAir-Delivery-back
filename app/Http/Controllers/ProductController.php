@@ -61,12 +61,9 @@ class ProductController extends Controller
     public function search(Request $request)
     {
         $name = trim($request->get('name'));
+        $categoryParam = trim($request->get('category'));
 
-        if (!$name) {
-            return Product::all();
-        }
-
-        $slug = Str::slug($name);
+        $slug = $name ? Str::slug($name) : null;
 
         // Синонимы категорий
         $synonyms = [
@@ -76,23 +73,40 @@ class ProductController extends Controller
         ];
 
         $categorySlug = null;
-        foreach ($synonyms as $cat => $words) {
-            foreach ($words as $word) {
-                if (mb_stripos($name, $word) !== false) {
-                    $categorySlug = $cat;
-                    break 2;
+
+        // Если category передан — ищем по нему
+        if ($categoryParam) {
+            $categorySlug = Str::slug($categoryParam);
+        } else {
+            // Если category не передан — пробуем определить по синонимам name
+            foreach ($synonyms as $cat => $words) {
+                foreach ($words as $word) {
+                    if (mb_stripos($name, $word) !== false) {
+                        $categorySlug = $cat;
+                        break 2;
+                    }
                 }
             }
         }
 
-        return Product::query()
-            ->when($categorySlug, function ($q) use ($categorySlug) {
-                $q->whereHas('category', function ($query) use ($categorySlug) {
-                    $query->where('slug', $categorySlug);
-                });
-            })
-            ->orWhere('name', 'like', "%$name%")
-            ->orWhere('slug', 'like', "%$slug%")
-            ->get();
+        $query = Product::query();
+
+        // Фильтр по категории
+        if ($categorySlug) {
+            $query->whereHas('category', function ($q) use ($categorySlug) {
+                $q->where('slug', $categorySlug)
+                    ->orWhere('name', 'like', "%$categorySlug%");
+            });
+        }
+
+        // Фильтр по имени
+        if ($name) {
+            $query->where(function ($q) use ($name, $slug) {
+                $q->where('name', 'like', "%$name%")
+                    ->orWhere('slug', 'like', "%$slug%");
+            });
+        }
+
+        return $query->get();
     }
 }
