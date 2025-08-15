@@ -136,6 +136,8 @@ class ProductController extends Controller
             });
         }
 
-        return $query->get();
+        // Ленивое постраничное получение
+        $perPage = 12;
+        return $query->paginate($perPage);
     }
 }
