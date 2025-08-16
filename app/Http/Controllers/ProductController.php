@@ -87,57 +87,56 @@ class ProductController extends Controller
 
     public function search(Request $request)
     {
-        $name = trim($request->get('name'));
+        $nameParam = trim($request->get('name'));
         $categoryParam = trim($request->get('category'));
+        $producerParam = trim($request->get('producer'));
+        $countryParam = trim($request->get('country'));
 
-        $slug = $name ? Str::slug($name) : null;
+        $query = Product::query()->with('category');
 
-        // Синонимы категорий
-        $synonyms = [
-            'fastfood' => ['fast food', 'fastfood', 'фаст фуд', 'бургеры', 'бургер', 'шаурма', 'шаверма', 'гамбургер', 'пицца'],
-            'restouran' => ['ресторан', 'кафе', 'столовая', 'пиццерия'],
-            'products' => ['продукты', 'еда', 'магазин']
-        ];
+        // 🔹 Поиск по имени товара или по категории (если name совпадает с категорией)
+        if ($nameParam) {
+            $slug = Str::slug($nameParam);
 
-        $categorySlug = null;
+            $query->where(function ($q) use ($nameParam, $slug) {
+                $q->where('name', 'like', "%{$nameParam}%")
+                    ->orWhereHas('category', function ($cat) use ($nameParam, $slug) {
+                        $cat->where('name', 'like', "%{$nameParam}%")
+                            ->orWhere('slug', $slug);
+                    });
+            });
+        }
 
-        // Если category передан — ищем по нему
+        // 🔹 Фильтр по категории (slug или имя)
         if ($categoryParam) {
-            $categorySlug = Str::slug($categoryParam);
-        } else {
-            // Если category не передан — пробуем определить по синонимам name
-            foreach ($synonyms as $cat => $words) {
-                foreach ($words as $word) {
-                    if (mb_stripos($name, $word) !== false) {
-                        $categorySlug = $cat;
-                        break 2;
-                    }
-                }
-            }
-        }
+            $slug = Str::slug($categoryParam);
 
-        $query = Product::query();
-
-        // Фильтр по категории
-        if ($categorySlug) {
-            $query->whereHas('category', function ($q) use ($categorySlug) {
-                $q
-                    ->where('slug', $categorySlug)
-                    ->orWhere('name', 'like', "%$categorySlug%");
+            $query->whereHas('category', function ($cat) use ($categoryParam, $slug) {
+                $cat->where('name', 'like', "%{$categoryParam}%")
+                    ->orWhere('slug', $slug);
             });
         }
 
-        // Фильтр по имени
-        if ($name) {
-            $query->where(function ($q) use ($name, $slug) {
-                $q
-                    ->where('name', 'like', "%$name%")
-                    ->orWhere('slug', 'like', "%$slug%");
-            });
+        // 🔹 Фильтр по производителю
+        if ($producerParam) {
+            $query->where('producer', 'like', "%{$producerParam}%");
         }
 
-        // Ленивое постраничное получение
-        $perPage = 12;
-        return $query->paginate($perPage);
+        // 🔹 Фильтр по стране
+        if ($countryParam) {
+            $query->where('country', 'like', "%{$countryParam}%");
+        }
+
+        // Пагинация
+        $products = $query->paginate(10);
+        return response($products, 200);
+        // return response()->json([
+        //     'data' => $products->items(),
+        //     'meta' => [
+        //         'current_page' => $products->currentPage(),
+        //         'last_page' => $products->lastPage(),
+        //         'total' => $products->total(),
+        //     ]
+        // ]);
     }
 }
