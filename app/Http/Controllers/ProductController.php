@@ -94,25 +94,50 @@ class ProductController extends Controller
 
         $query = Product::query()->with('category');
 
-        // 🔹 Поиск по имени товара или по категории (если name совпадает с категорией)
-        if ($nameParam) {
-            $slug = Str::slug($nameParam);
+        // 🔹 Словарь синонимов для категорий
+        $synonyms = [
+            'fastfood' => ['fast food', 'fastfood', 'фаст фуд', 'фастфуд', 'бургеры', 'бургер', 'шаурма', 'пицца', "суши", "быстрая еда", "фаст"],
+            'restouran' => ['restouran', 'ресторан', 'рестик', 'ресмторан'],
+            'products' => ['продукты', 'товары', 'products', 'food', "еда"],
+        ];
 
-            $query->where(function ($q) use ($nameParam, $slug) {
-                $q->where('name', 'like', "%{$nameParam}%")
-                    ->orWhereHas('category', function ($cat) use ($nameParam, $slug) {
-                        $cat->where('name', 'like', "%{$nameParam}%")
+        // 🔹 Функция нормализации параметра (поиск в синонимах)
+        $normalize = function ($param) use ($synonyms) {
+            if (!$param) return null;
+
+            $paramLower = mb_strtolower($param);
+
+            foreach ($synonyms as $main => $alts) {
+                if (in_array($paramLower, $alts) || $paramLower === $main) {
+                    return $main;
+                }
+            }
+
+            return $param; // если синонима нет — оставляем как есть
+        };
+
+        $nameParamNorm = $normalize($nameParam);
+        $categoryParamNorm = $normalize($categoryParam);
+
+        // 🔹 Поиск по имени товара или категории
+        if ($nameParamNorm) {
+            $slug = Str::slug($nameParamNorm);
+
+            $query->where(function ($q) use ($nameParamNorm, $slug) {
+                $q->where('name', 'like', "%{$nameParamNorm}%")
+                    ->orWhereHas('category', function ($cat) use ($nameParamNorm, $slug) {
+                        $cat->where('name', 'like', "%{$nameParamNorm}%")
                             ->orWhere('slug', $slug);
                     });
             });
         }
 
-        // 🔹 Фильтр по категории (slug или имя)
-        if ($categoryParam) {
-            $slug = Str::slug($categoryParam);
+        // 🔹 Фильтр по категории
+        if ($categoryParamNorm) {
+            $slug = Str::slug($categoryParamNorm);
 
-            $query->whereHas('category', function ($cat) use ($categoryParam, $slug) {
-                $cat->where('name', 'like', "%{$categoryParam}%")
+            $query->whereHas('category', function ($cat) use ($categoryParamNorm, $slug) {
+                $cat->where('name', 'like', "%{$categoryParamNorm}%")
                     ->orWhere('slug', $slug);
             });
         }
@@ -129,14 +154,7 @@ class ProductController extends Controller
 
         // Пагинация
         $products = $query->paginate(10);
+
         return response($products, 200);
-        // return response()->json([
-        //     'data' => $products->items(),
-        //     'meta' => [
-        //         'current_page' => $products->currentPage(),
-        //         'last_page' => $products->lastPage(),
-        //         'total' => $products->total(),
-        //     ]
-        // ]);
     }
 }
